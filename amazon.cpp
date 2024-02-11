@@ -5,10 +5,13 @@
 #include <vector>
 #include <iomanip>
 #include <algorithm>
+#include <queue>
 #include "product.h"
 #include "db_parser.h"
 #include "product_parser.h"
 #include "util.h"
+#include "mydatastore.h"
+#include "datastore.h"
 
 using namespace std;
 struct ProdNameSorter {
@@ -29,7 +32,7 @@ int main(int argc, char* argv[])
      * Declare your derived DataStore object here replacing
      *  DataStore type to your derived type
      ****************/
-    DataStore ds;
+    MyDataStore ds;
 
 
 
@@ -43,7 +46,7 @@ int main(int argc, char* argv[])
     // Instantiate the parser
     DBParser parser;
     parser.addSectionParser("products", productSectionParser);
-    parser.addSectionParser("users", userSectionParser);
+    parser.addSectionParser("users", userSectionParser); 
 
     // Now parse the database to populate the DataStore
     if( parser.parse(argv[1], ds) ) {
@@ -93,22 +96,57 @@ int main(int argc, char* argv[])
             else if ( cmd == "QUIT") {
                 string filename;
                 if(ss >> filename) {
-                    ofstream ofile(filename.c_str());
+                    ofstream ofile(filename.c_str()); 
                     ds.dump(ofile);
                     ofile.close();
                 }
                 done = true;
             }
-	    /* Add support for other commands here */
-
-
-
-
-            else {
+            else if (cmd == "ADD")
+            {
+                string current_user;
+                if (ss >> current_user)
+                {
+                  current_user = convToLower(current_user);
+                  int index;
+                  if (ss >> index)
+                  {
+                      ds.addCart(current_user, hits[index - 1]);
+                  }
+                }
+            }
+            else if (cmd == "VIEWCART")
+            {
+                string current_user;
+                if(ss >> current_user)
+                {
+                    current_user = convToLower(current_user);
+                    try
+                    {
+                        std::deque<Product*> user_cart = ds.viewCart(current_user);
+                        std::vector<Product*> user_cart_vector(user_cart.begin(),user_cart.end()); 
+                        displayProducts(user_cart_vector);
+                    }
+                    catch(const std::exception& e)
+                    {
+                        std::cerr << e.what() << std::endl;
+                    }
+                }
+            }
+            else if (cmd == "BUYCART")
+            {
+                string current_user;
+                if(ss >> current_user)
+                {
+                    current_user = convToLower(current_user);
+                    ds.buyCart(current_user);
+                }
+            }
+            else 
+            {
                 cout << "Unknown command" << endl;
             }
         }
-
     }
     return 0;
 }
@@ -120,7 +158,7 @@ void displayProducts(vector<Product*>& hits)
     	cout << "No results found!" << endl;
     	return;
     }
-    std::sort(hits.begin(), hits.end(), ProdNameSorter());
+    // std::sort(hits.begin(), hits.end(), ProdNameSorter());
     for(vector<Product*>::iterator it = hits.begin(); it != hits.end(); ++it) {
         cout << "Hit " << setw(3) << resultNo << endl;
         cout << (*it)->displayString() << endl;
